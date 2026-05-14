@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D模型全景展示与一键拆解</title>
+    
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f0f2f5; 
+            height: 100vh; 
+            overflow: hidden;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        #model-viewer-container { 
+            width: 100vw; 
+            height: 100vh; 
+            position: relative; 
+        }
+        
+        /* 加入 touch-action="none" 防止拖拽模型时网页跟着滚动 */
+        model-viewer { 
+            width: 100%; 
+            height: 100%; 
+            outline: none; 
+            touch-action: none;
+        }
+        
+        /* 快捷键提示面板 */
+        .shortcut-tips {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.65);
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.8;
+            pointer-events: none;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+        
+        /* 底部控制台 */
+        .control-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .divider { 
+            width: 2px; height: 30px; background: #ddd; margin: 0 5px; 
+        }
+        
+        button {
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 2px solid #0056b3;
+            background-color: white;
+            color: #0056b3;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+        
+        button:hover { background-color: #0056b3; color: white; }
+        
+        .action-btn { background-color: #28a745; color: white; border-color: #28a745; }
+        .action-btn:hover { background-color: #218838; border-color: #218838; }
+        
+        .reset-btn { background-color: #dc3545; color: white; border-color: #dc3545; }
+        .reset-btn:hover { background-color: #c82333; border-color: #c82333; }
+    </style>
+</head>
+<body>
+
+    <div class="shortcut-tips">
+        <b>⌨️ 键盘快捷键指南：</b><br>
+        [ 1 ] 正视图 | [ 2 ] 后视图<br>
+        [ 3 ] 左视图 | [ 4 ] 右视图<br>
+        [ 5 ] 顶视图 | [ 6 ] 底视图<br>
+        [ 空格键 ] 播放/暂停拆解<br>
+        [ R 键 ] 一键复位
+    </div>
+
+    <div id="model-viewer-container">
+        <model-viewer 
+            id="my-model" 
+            src="1212.glb" 
+            camera-controls 
+            min-camera-pitch="0deg" 
+            max-camera-pitch="180deg"
+            shadow-intensity="1">
+        </model-viewer>
+
+        <div class="control-panel">
+            <button onclick="changeView('0deg 90deg auto')">正视图 (1)</button>
+            <button onclick="changeView('180deg 90deg auto')">后视图 (2)</button>
+            <button onclick="changeView('-90deg 90deg auto')">左视图 (3)</button>
+            <button onclick="changeView('90deg 90deg auto')">右视图 (4)</button>
+            <button onclick="changeView('0deg 0deg auto')">顶视图 (5)</button>
+            <button onclick="changeView('0deg 180deg auto')">底视图 (6)</button>
+            
+            <div class="divider"></div>
+            
+            <button id="btn-disassemble" class="action-btn">播放/暂停拆解 (Space)</button>
+            <button id="btn-reset" class="reset-btn">复位 (R)</button>
+        </div>
+    </div>
+
+    <script>
+        const viewer = document.getElementById('my-model');
+        const btnDisassemble = document.getElementById('btn-disassemble');
+        const btnReset = document.getElementById('btn-reset');
+
+        viewer.addEventListener('load', () => {
+            viewer.loop = false; 
+            viewer.pause();      
+        });
+
+        window.changeView = function(orbitAngles) {
+            viewer.cameraOrbit = orbitAngles;
+        };
+
+        function toggleDisassemble() {
+            if (viewer.paused) {
+                if (viewer.currentTime >= viewer.duration) {
+                    viewer.currentTime = 0;
+                }
+                viewer.play();
+            } else {
+                viewer.pause();
+            }
+        }
+
+        function resetModel() {
+            viewer.pause();
+            viewer.currentTime = 0;
+        }
+
+        btnDisassemble.addEventListener('click', toggleDisassemble);
+        btnReset.addEventListener('click', resetModel);
+
+        viewer.addEventListener('finished', () => {
+            viewer.pause();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.target.tagName.toLowerCase() === 'input') return;
+
+            const key = event.key.toLowerCase();
+
+            switch(key) {
+                case '1': changeView('0deg 90deg auto'); break;
+                case '2': changeView('180deg 90deg auto'); break;
+                case '3': changeView('-90deg 90deg auto'); break;
+                case '4': changeView('90deg 90deg auto'); break;
+                case '5': changeView('0deg 0deg auto'); break;
+                case '6': changeView('0deg 180deg auto'); break;
+                case ' ': 
+                    event.preventDefault(); 
+                    toggleDisassemble(); 
+                    break;
+                case 'r': 
+                    resetModel(); 
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
